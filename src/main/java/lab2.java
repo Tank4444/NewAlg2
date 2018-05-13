@@ -76,235 +76,198 @@ public class lab2 {
         System.out.println("Введите по какому полю сортировать(1-6, 1-3 Int,4-5 string)");
         int t = in.nextInt();
 
-        int pred = 100;
-        n = pred;
-        nSchet = nVsego;
-        while (n <= nSchet) {
-            list = createList(n, pred);
+        int allRecord=0;
+        while (allRecord < nSchet) {
+            int rand_count=random.nextInt()%1000;
+
+            list = createList(rand_count, rand_count);
             saveInFile(list, fileIn, true);
+            saveInFile("-",fileIn,true);
             ArrayList<container> res = sort(f, s, t, list);
             saveInFile(res, fileSort, true);
-            nSchet -= n;
+            saveInFile("-",fileSort,true);
+            allRecord += rand_count;
         }
-        list = createList(nSchet, pred);
-        saveInFile(list, fileIn, true);
-        ArrayList<container> res = sort(f, s, t, list);
-        saveInFile(res, fileSort, true);
 
         //start work
         copy(fileSort, fileCopyPostSort, false);
-        File fl = sort(f, s, t, fileSort);
+        //work with fileSort
+        //File fl = sort(f, s, t, fileSort);
+        split(new int[]{f,s,t},fileSort);
         File output = new File("output");
-        copy(fl, output, false);
+        //copy(fl, output, false);
+
 
 
     }
 
-    File sort(int f, int s, int t, File file) {
-        int n = 0;
-        File pred = new File("sort1");
-        File prom;
-        copy(file, pred, false);
-        File[] splited;
-        do {
-            n++;
-            splited = split(f, pred);
-            prom = merge(splited, f);
-            copy(prom, pred, false);
-            System.out.println("this is " + n + " time with " + series + " seriese and file is " + fileIsEmpty(splited[1]));
-        } while (!fileIsEmpty(splited[1]));
-        File result = new File("result1");
-        File promesh = new File("promesh1");
+    int StrInFile(File file)
+    {
+        int count=0;
+        String str;
         try {
-
-            FileReader fr = new FileReader(pred);
-            BufferedReader br = new BufferedReader(fr);
-            FileWriter fw = new FileWriter(result);
-            FileWriter fw1 = new FileWriter(promesh);
-
-            String current = br.readLine();
-            container last = new container(current.split(" "));
-            fw1.write(current + "\n");
-            fw1.flush();
-            container carcont;
-            while ((current = br.readLine()) != null) {
-                carcont = new container(current.split(" "));
-                if (sravnenie(last, carcont, f) != 0) {
-                    File sort = sort(s, t, promesh);
-                    copy(sort, result, true);
-                    promesh.delete();
-                    promesh = new File("promesh1");
-                    fw1 = new FileWriter(promesh);
-                }
-
-                fw1.write(current + "\n");
-                fw1.flush();
-                last = carcont;
+            FileReader fr=new FileReader(file);
+            BufferedReader br=new BufferedReader(fr);
+            while((str=br.readLine())!=null)
+            {
+                if(str.equals("-"))count++;
             }
-
+            return count;
         } catch (FileNotFoundException e) {
             e.printStackTrace();
         } catch (IOException e) {
             e.printStackTrace();
         }
-
-
-        return result;
+        return count;
     }
 
-    File sort(int s, int t, File file) {
-        File pred = new File("sort2");
-        File prom;
-        copy(file, pred, false);
-        File[] splited;
-        do {
-            splited = split(s, pred);
-            prom = merge(splited, s);
-            copy(prom, pred, false);
-        } while (!fileIsEmpty(splited[1]));
-        File result = new File("result2");
-        File promesh = new File("promesh2");
-        try {
+    void split(int[] fields,File file) {
+        File main= file;
 
-            FileReader fr = new FileReader(pred);
-            BufferedReader br = new BufferedReader(fr);
-            FileWriter fw = new FileWriter(result);
-            FileWriter fw1 = new FileWriter(promesh);
+            int max_blocks;
+            int cbf ; //количество блоков в первом файле
+            int cbs = 0; //количество блоков во втором файле
 
-            String current = br.readLine();
-            container last = new container(current.split(" "));
-            fw1.write(current + "\n");
-            fw1.flush();
-            container carcont;
-            while ((current = br.readLine()) != null) {
-                carcont = new container(current.split(" "));
-                if (sravnenie(last, carcont, s) != 0) {
-                    File sort = sort(t, promesh);
-                    copy(sort, result, true);
-                    promesh.delete();
-                    promesh = new File("promesh2");
-                    fw1 = new FileWriter(promesh);
+            do {
+
+                //подсчёт блоков в файле
+                max_blocks = StrInFile(file);
+
+                //разделение на два файла
+                if (max_blocks > 1) {
+
+                    cbf = max_blocks / 2;
+                    cbs = max_blocks - cbf;
+
+                    //переписываем блоки в первый файл
+                    block_recording(main, "file1.txt", cbf);
+
+                    //переписываем блоки во второй файл
+                    block_recording(main, "file2.txt", cbs);
+
                 }
 
-                fw1.write(current + "\n");
-                fw1.flush();
-                last = carcont;
-            }
+                if (max_blocks > 1) merge(fields, cbs);
 
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
+            } while (max_blocks > 1);
+    }
+    void merge(int[] fields, int cab) {
+
+        ofstream bofs;
+        bofs.open("buffer_file.txt");
+
+        ifstream ifile_f; ifstream ifile_s;
+        ifile_f.open("file1.txt");
+        ifile_s.open("file2.txt");
+
+        int cab_counter = 0;
+
+        string str_f; getline(ifile_f, str_f);
+        string str_s; getline(ifile_s, str_s);
+
+        do {
+            //если 1 строка равна порогу, заносим строки 2 файла в основной, пока не дойдем до порога
+            if (str_f == "-1 -1 -1 *** ***") {
+                while (str_s != "-1 -1 -1 *** ***") {
+                    bofs << str_s << endl;
+                    getline(ifile_s, str_s);
+                }
+                cab_counter++;
+
+                if(cab_counter != cab)
+                    bofs << "-1 -1 -1 *** ***" << endl;
+                else
+                    bofs << "-1 -1 -1 *** ***" ;
+
+                getline(ifile_f, str_f);
+                getline(ifile_s, str_s);
+            }
+            else
+                //если 2 строка равна порогу, заносим строки 1 файла в основной, пока не дойдем до порога
+                if (str_s == "-1 -1 -1 *** ***") {
+                    while (str_f != "-1 -1 -1 *** ***") {
+                        bofs << str_f << endl;
+                        getline(ifile_f, str_f);
+                    }
+                    cab_counter++;
+
+                    if (cab_counter != cab)
+                        bofs << "-1 -1 -1 *** ***" << endl;
+                    else
+                        bofs << "-1 -1 -1 *** ***";
+
+                    getline(ifile_f, str_f);
+                    getline(ifile_s, str_s);
+                }
+                //сравниваем 2 строки
+                else {
+
+                    vector<string> list_f;
+                    str_split(&list_f, str_f);
+                    _element *elF = new _element(atoi(list_f[0].c_str()), atoi(list_f[1].c_str()), atoi(list_f[2].c_str()), list_f[3], list_f[4]);
+                    list_f.clear();
+
+                    vector<string> list_s;
+                    str_split(&list_s, str_s);
+                    _element *elS = new _element(atoi(list_s[0].c_str()), atoi(list_s[1].c_str()), atoi(list_s[2].c_str()), list_s[3], list_s[4]);
+                    list_s.clear();
+
+
+                    if (elF->compare_all_element(elS, fields)) {
+                        bofs << str_f << endl;
+                        getline(ifile_f, str_f);
+                    }
+
+                    else {
+                        bofs << str_s << endl;
+                        getline(ifile_s, str_s);
+                    }
+
+                    delete elF; delete elS;
+                }
+
+        } while (!ifile_f.eof() || !ifile_s.eof());
+
+
+        ifile_f.close();
+        ifile_s.close();
+        bofs.close();
+        remove("file1.txt");
+        remove("file2.txt");
+
+    }
+
+    /*функция записи блоков в буфферный файл*/
+    void block_recording(File main, String name, int border) {
+        try {
+            String str;
+            FileWriter ofs=new FileWriter(new File(name));
+            FileReader fr=new FileReader(main);
+            BufferedReader bf=new BufferedReader(fr);
+            for (int i = 0; i < border;) {
+                str=bf.readLine();
+                if (i == border - 1)
+                    if (str .equals("-")) {
+                        ofs.write(str);
+                        i++;
+                    }
+                    else
+                        ofs.write(str+"\n");
+                else
+                if (str.equals("-")) {
+                    ofs.write(str+"\n");
+                    i++;
+                }
+                else
+                    ofs.write(str+"\n");
+            }
+            ofs.flush();
+            ofs.close();
+
         } catch (IOException e) {
             e.printStackTrace();
         }
-        return result;
-    }
 
-    File sort(int t, File file) {
-        File result = new File("sort3");
-        File prom;
-        copy(file, result, false);
-        File[] splited;
-        do {
-            n++;
-            splited = split(t, result);
-            prom = merge(splited, t);
-            copy(prom, result, false);
-        } while (!fileIsEmpty(splited[1]));
-        return result;
-    }
-
-
-    File[] split(int param, File fileIn) {
-        boolean dir = true;
-        boolean thisIsFirst = true;
-        File left = new File("left");
-        left.delete();
-        File right = new File("right");
-        left.delete();
-        try {
-            FileReader fileReader = new FileReader(fileIn);
-            BufferedReader reader = new BufferedReader(fileReader);
-            FileWriter leftFile = new FileWriter(left, false);
-            FileWriter rightFile = new FileWriter(right, false);
-            String string = reader.readLine();
-            String[] last = string.split(" ");
-            leftFile.write(string + "\n");
-            series = 1;
-            while ((string = reader.readLine()) != null) {
-                String[] now = string.split(" ");
-                switch (param - 1) {
-                    case 0:
-                        if (last[0].compareTo(now[0]) > 0) {
-                            dir = !dir;
-                            series++;
-                            if (!thisIsFirst) {
-                                if (dir) leftFile.write("-" + "\n");
-                                else rightFile.write("-" + "\n");
-                            } else thisIsFirst = !thisIsFirst;
-                        }
-                        break;
-                    case 1:
-                        if (last[1].compareTo(now[1]) > 0) {
-                            dir = !dir;
-                            series++;
-                            if (!thisIsFirst) {
-                                if (dir) leftFile.write("-" + "\n");
-                                else rightFile.write("-" + "\n");
-                            } else thisIsFirst = !thisIsFirst;
-                        }
-                        break;
-                    case 2:
-                        if (last[2].compareTo(now[2]) > 0) {
-                            dir = !dir;
-                            series++;
-                            if (!thisIsFirst) {
-                                if (dir) leftFile.write("-" + "\n");
-                                else rightFile.write("-" + "\n");
-                            } else thisIsFirst = !thisIsFirst;
-                        }
-                        break;
-                    case 3:
-                        if (last[3].compareTo(now[3]) > 0) {
-                            dir = !dir;
-                            series++;
-                            if (!thisIsFirst) {
-                                if (dir) leftFile.write("-" + "\n");
-                                else rightFile.write("-" + "\n");
-                            } else thisIsFirst = !thisIsFirst;
-                        }
-                        break;
-                    case 4:
-                        if (last[4].compareTo(now[4]) > 0) {
-                            dir = !dir;
-                            series++;
-                            if (!thisIsFirst) {
-                                if (dir) leftFile.write("-" + "\n");
-                                else rightFile.write("-" + "\n");
-                            } else thisIsFirst = !thisIsFirst;
-                        }
-                        break;
-                    default:
-                        break;
-                }
-                if (dir) {
-                    leftFile.write(string + "\n");
-                } else {
-                    rightFile.write(string + "\n");
-                }
-                last = now;
-                leftFile.flush();
-                rightFile.flush();
-            }
-            leftFile.close();
-            rightFile.close();
-
-            return new File[]{left, right};
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        return null;
     }
 
     ArrayList<container> createList(int count, int predel) {
@@ -486,6 +449,15 @@ public class lab2 {
         }
     }
 
+    public void saveInFile(String str, File file, boolean append) {
+        try {
+            FileWriter fileWriter = new FileWriter(file, append);
+            fileWriter.write(str+"\n");
+            fileWriter.flush();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
     private void quickSort(ArrayList<container> arrayList, int col) {
         doSort(0, arrayList.size() - 1, arrayList, col);
     }
@@ -603,90 +575,6 @@ public class lab2 {
         return res;
     }
 
-    File merge(File[] files,int p)
-    {
-        File res=new File("connect");
-        try {
-            FileReader fr1 = new FileReader(files[0]);
-            FileReader fr2=new FileReader(files[1]);
-
-            BufferedReader bf1=new BufferedReader(fr1);
-            BufferedReader bf2=new BufferedReader(fr2);
-
-            FileWriter fileWriter=new FileWriter(res);
-            String str1=bf1.readLine(),str2=bf2.readLine();
-            do {
-                //если 1 строка равна порогу, заносим строки 2 файла в основной, пока не дойдем до порога
-                if(str1==null)
-                {
-                    while(str2!=null)
-                    {
-                        if(!str2.equals("-"))fileWriter.write(str2+"\n");
-                        str2=bf2.readLine();
-                    }
-                }
-                    else
-                if (str1.equals("-")) {
-                    while (!str2.equals("-")) {
-                        fileWriter.write(str2+"\n");
-                        str2=bf2.readLine();
-                        if(str2==null)break;
-                    }
-                    str1=bf1.readLine();
-                    str2=bf2.readLine();
-                }
-                else
-                    //если 2 строка равна порогу, заносим строки 1 файла в основной, пока не дойдем до порога
-                    if(str2==null)
-                    {
-                        while(str1!=null)
-                        {
-                            if(!str1.equals("-"))fileWriter.write(str1+"\n");
-                            str1=bf1.readLine();
-                        }
-                    } else
-                    if (str2.equals("-")) {
-                        while (!str1.equals("-")) {
-                            fileWriter.write(str1+"\n");
-                            str1=bf1.readLine();
-                            if(str1==null)break;
-                        }
-
-                        str1=bf1.readLine();
-                        str2=bf2.readLine();
-                    }
-                    //сравниваем 2 строки
-                    else {
-
-
-                        container c1=new container(str1.split(" "));
-                        container c2=new container(str2.split(" "));
-                        if(sravnenie(c1,c2,p)<0)
-                        {
-                            fileWriter.write(str1+"\n");
-                            str1=bf1.readLine();
-                        }else
-                        {
-                            fileWriter.write(str2+"\n");
-                            str2=bf2.readLine();
-                        }
-                    }
-                    fileWriter.flush();
-
-            } while (str1!=null || str2!=null);
-
-
-
-
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-
-        return res;
-    }
 
     {
     /*
