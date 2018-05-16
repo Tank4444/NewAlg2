@@ -3,11 +3,12 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Random;
 import java.util.Scanner;
+import java.util.logging.LogManager;
+import java.util.logging.Logger;
 
 public class lab2 {
     static String alphabet = "abcdefghijklmnopqrstuvwxyz";
     int series = 0;
-
     static public String getRandomString() {
         return "" + alphabet.charAt(new Random().nextInt(26)) + alphabet.charAt(new Random().nextInt(26)) + alphabet.charAt(new Random().nextInt(26));
     }
@@ -48,6 +49,37 @@ public class lab2 {
             this.str5 = ar[4];
         }
 
+        boolean compare_all_element(container other_element,int[] fields)
+        {
+            for (int i = 0; i < 3; i++) {
+                switch (fields[i]) {
+                    case 1:
+                        if (this.int1 < other_element.int1) return true;
+                        if (this.int1 > other_element.int1) return false;
+                    break;
+                    case 2:
+                        if (this.int2 < other_element.int2) return true;
+                        if (this.int2 > other_element.int2) return false;
+                    break;
+                    case 3:
+                        if (this.int3 < other_element.int3) return true;
+                    if (this.int3 > other_element.int3) return false;
+                    break;
+                    case 4:
+                        if (this.str4.compareTo(other_element.str4)<0) return true;
+                        if (this.str4.compareTo(other_element.str4)>0) return false;
+                    break;
+                    case 5:
+                        if (this.str5.compareTo(other_element.str5)<0) return true;
+                        if (this.str5.compareTo(other_element.str5)>0) return false;
+                    break;
+                    default:
+                        break;
+                }
+            }
+
+            return true;
+        }
 
     }
 
@@ -76,18 +108,27 @@ public class lab2 {
         System.out.println("Введите по какому полю сортировать(1-6, 1-3 Int,4-5 string)");
         int t = in.nextInt();
 
-        int allRecord=0;
-        while (allRecord < nSchet) {
-            int rand_count=random.nextInt()%1000;
+        for (int allRecord = 0; allRecord < nVsego;) {
+            outInConsole("Generate block");
+            int rand_count=Math.abs(random.nextInt()%1000);
 
             list = createList(rand_count, rand_count);
             saveInFile(list, fileIn, true);
             saveInFile("-",fileIn,true);
             ArrayList<container> res = sort(f, s, t, list);
             saveInFile(res, fileSort, true);
+
+            /*
+            if(allRecord + rand_count >= nVsego)
+                saveInFile("-",fileSort,true);
+            else
+                saveInFile("-\n",fileSort,true);
+                */
+
             saveInFile("-",fileSort,true);
             allRecord += rand_count;
         }
+        outInConsole("All block created, start split");
 
         //start work
         copy(fileSort, fileCopyPostSort, false);
@@ -96,8 +137,6 @@ public class lab2 {
         split(new int[]{f,s,t},fileSort);
         File output = new File("output");
         //copy(fl, output, false);
-
-
 
     }
 
@@ -122,14 +161,26 @@ public class lab2 {
     }
 
     void split(int[] fields,File file) {
-        File main= file;
+
+        try {
+            outInConsole("Begin split");
+            File main= file;
+            BufferedReader bf=new BufferedReader(new FileReader(main));
+            File f1,f2;
 
             int max_blocks;
             int cbf ; //количество блоков в первом файле
             int cbs = 0; //количество блоков во втором файле
 
             do {
+                outInConsole("iteration of split");
 
+                f1=new File("file1");
+                f1.delete();
+                f1.createNewFile();
+                f2=new File("file2");
+                f2.delete();
+                f2.createNewFile();
                 //подсчёт блоков в файле
                 max_blocks = StrInFile(file);
 
@@ -140,110 +191,110 @@ public class lab2 {
                     cbs = max_blocks - cbf;
 
                     //переписываем блоки в первый файл
-                    block_recording(main, "file1.txt", cbf);
+                    block_recording(bf, f1, cbf);
 
                     //переписываем блоки во второй файл
-                    block_recording(main, "file2.txt", cbs);
+                    block_recording(bf, f2, cbs);
 
                 }
 
-                if (max_blocks > 1) merge(fields, cbs);
-
+                if (max_blocks > 1) merge(fields, cbs,file,f1,f2);
+                outInConsole("merge end");
             } while (max_blocks > 1);
+        outInConsole("end of split");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
-    void merge(int[] fields, int cab) {
 
-        ofstream bofs;
-        bofs.open("buffer_file.txt");
+    void merge(int[] fields, int cab,File file,File f1,File f2) {
 
-        ifstream ifile_f; ifstream ifile_s;
-        ifile_f.open("file1.txt");
-        ifile_s.open("file2.txt");
+        try {
+            outInConsole("start merge");
+            file.createNewFile();
+            FileWriter bofs=new FileWriter(file);
+            FileReader fr1=new FileReader(f1);
+            FileReader fr2=new FileReader(f2);
 
-        int cab_counter = 0;
+            BufferedReader ifile_f=new BufferedReader(fr1);
+            BufferedReader ifile_s=new BufferedReader(fr2);
 
-        string str_f; getline(ifile_f, str_f);
-        string str_s; getline(ifile_s, str_s);
-
-        do {
-            //если 1 строка равна порогу, заносим строки 2 файла в основной, пока не дойдем до порога
-            if (str_f == "-1 -1 -1 *** ***") {
-                while (str_s != "-1 -1 -1 *** ***") {
-                    bofs << str_s << endl;
-                    getline(ifile_s, str_s);
-                }
-                cab_counter++;
-
-                if(cab_counter != cab)
-                    bofs << "-1 -1 -1 *** ***" << endl;
-                else
-                    bofs << "-1 -1 -1 *** ***" ;
-
-                getline(ifile_f, str_f);
-                getline(ifile_s, str_s);
-            }
-            else
-                //если 2 строка равна порогу, заносим строки 1 файла в основной, пока не дойдем до порога
-                if (str_s == "-1 -1 -1 *** ***") {
-                    while (str_f != "-1 -1 -1 *** ***") {
-                        bofs << str_f << endl;
-                        getline(ifile_f, str_f);
+            int cab_counter = 0;
+            String str_f=ifile_f.readLine();
+            String str_s=ifile_s.readLine();
+            do {
+                //если 1 строка равна порогу, заносим строки 2 файла в основной, пока не дойдем до порога
+                if (str_f.equals("-")) {
+                    while (!str_s.equals("-")) {
+                        bofs.write(str_s+"\n");
+                        str_s=ifile_s.readLine();
                     }
                     cab_counter++;
 
-                    if (cab_counter != cab)
-                        bofs << "-1 -1 -1 *** ***" << endl;
+                    if(cab_counter != cab)
+                        bofs.write("-\n");
                     else
-                        bofs << "-1 -1 -1 *** ***";
+                        bofs.write("-");
 
-                    getline(ifile_f, str_f);
-                    getline(ifile_s, str_s);
+                    str_f=ifile_f.readLine();
+                    str_s=ifile_s.readLine();
+                    bofs.flush();
                 }
-                //сравниваем 2 строки
-                else {
+                else
+                    //если 2 строка равна порогу, заносим строки 1 файла в основной, пока не дойдем до порога
+                    if (str_s.equals("-")) {
+                        while (!str_f.equals("-")) {
+                            bofs.write(str_f+"\n");
+                            str_f=ifile_f.readLine();
+                        }
+                        cab_counter++;
 
-                    vector<string> list_f;
-                    str_split(&list_f, str_f);
-                    _element *elF = new _element(atoi(list_f[0].c_str()), atoi(list_f[1].c_str()), atoi(list_f[2].c_str()), list_f[3], list_f[4]);
-                    list_f.clear();
+                        if (cab_counter != cab)
+                            bofs.write("-\n");
+                        else
+                            bofs.write("-");
 
-                    vector<string> list_s;
-                    str_split(&list_s, str_s);
-                    _element *elS = new _element(atoi(list_s[0].c_str()), atoi(list_s[1].c_str()), atoi(list_s[2].c_str()), list_s[3], list_s[4]);
-                    list_s.clear();
-
-
-                    if (elF->compare_all_element(elS, fields)) {
-                        bofs << str_f << endl;
-                        getline(ifile_f, str_f);
+                        str_f=ifile_f.readLine();
+                        str_s=ifile_s.readLine();
+                        bofs.flush();
                     }
-
+                    //сравниваем 2 строки
                     else {
-                        bofs << str_s << endl;
-                        getline(ifile_s, str_s);
+                        container elF=new container(str_f.split(" "));
+                        container elS=new container(str_s.split(" "));
+
+                        if (elF.compare_all_element(elS, fields)) {
+                            bofs.write(str_f+"\n");
+                            str_f=ifile_f.readLine();
+                        }
+
+                        else {
+                            bofs.write(str_s+"\n");
+                            str_s=ifile_s.readLine();
+                        }
+                        bofs.flush();
                     }
+                bofs.flush();
+            } while ((str_f=ifile_f.readLine())!=null || (str_s=ifile_s.readLine())!=null);
+            //while ((str_f=ifile_f.readLine())!=null || (str_s=ifile_s.readLine())!=null);
 
-                    delete elF; delete elS;
-                }
+            bofs.flush();
 
-        } while (!ifile_f.eof() || !ifile_s.eof());
-
-
-        ifile_f.close();
-        ifile_s.close();
-        bofs.close();
-        remove("file1.txt");
-        remove("file2.txt");
-
+            ifile_f.close();
+            ifile_s.close();
+            bofs.close();
+            f1.delete();
+            f2.delete();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     /*функция записи блоков в буфферный файл*/
-    void block_recording(File main, String name, int border) {
+    void block_recording(BufferedReader bf, File file, int border) {
         try {
             String str;
-            FileWriter ofs=new FileWriter(new File(name));
-            FileReader fr=new FileReader(main);
-            BufferedReader bf=new BufferedReader(fr);
+            FileWriter ofs=new FileWriter(file);
             for (int i = 0; i < border;) {
                 str=bf.readLine();
                 if (i == border - 1)
@@ -950,4 +1001,5 @@ public class lab2 {
     */
     }
 
+    void outInConsole(String str){System.out.println(str+"\n");}
 }
